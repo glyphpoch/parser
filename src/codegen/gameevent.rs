@@ -402,11 +402,12 @@ pub fn generate_game_events(demo: Demo) -> TokenStream {
                 }
             };
             if T::value_type() != entry.kind {
-                return Err(ParseError::InvalidGameEvent {
-                    expected_type: T::value_type(),
-                    name,
-                    found_type: entry.kind,
-                });
+                return Ok(T::default());
+                //return Err(ParseError::InvalidGameEvent {
+                //    expected_type: T::value_type(),
+                //    name,
+                //    found_type: entry.kind,
+                //});
             }
             Ok(T::read(stream)?)
         }
