@@ -436,6 +436,7 @@ impl MessageHandler for Analyser {
         index: usize,
         entry: &StringTableEntry,
         _parser_state: &ParserState,
+        _tick: DemoTick,
     ) {
         if table == "userinfo" {
             let _ = self.parse_user_info(
