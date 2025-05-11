@@ -356,7 +356,8 @@ impl Parse<'_> for PacketEntitiesMessage {
             let diff: u32 = read_bit_var(&mut data)?;
             last_index = last_index.saturating_add(diff as i32).saturating_add(1);
             if last_index >= 2048 {
-                return Err(ParseError::InvalidDemo("invalid entity index"));
+                //return Err(ParseError::InvalidDemo("invalid entity index"));
+                continue
             }
             let entity_index = EntityId::from(last_index as u32);
 
@@ -364,20 +365,38 @@ impl Parse<'_> for PacketEntitiesMessage {
             if update_type == UpdateType::Enter {
                 let mut entity =
                     Self::read_enter(&mut data, entity_index, state, base_line, delta)?;
-                let send_table = get_send_table(state, entity.server_class)?;
+                let send_table = get_send_table(state, entity.server_class);
+                if send_table.is_err() {
+                    continue
+                }
+                let send_table = send_table.expect("manually checked");
+
                 Self::read_update(&mut data, send_table, &mut entity.props, entity_index)?;
 
                 entities.push(entity);
             } else if update_type == UpdateType::Preserve {
-                let mut entity = get_entity_for_update(state, entity_index, update_type, delta)?;
-                let send_table = get_send_table(state, entity.server_class)?;
+                let entity = get_entity_for_update(state, entity_index, update_type, delta);
+                if entity.is_err() {
+                    continue
+                }
+                let mut entity = entity.expect("manually checked");
+
+                let send_table = get_send_table(state, entity.server_class);
+                if send_table.is_err() {
+                    continue
+                }
+                let send_table = send_table.expect("manually checked");
 
                 Self::read_update(&mut data, send_table, &mut entity.props, entity_index)?;
                 entity.in_pvs = true;
 
                 entities.push(entity);
             } else if state.entity_classes.contains_key(&entity_index) {
-                let entity = get_entity_for_update(state, entity_index, update_type, delta)?;
+                let entity = get_entity_for_update(state, entity_index, update_type, delta);
+                if entity.is_err() {
+                    continue
+                }
+                let entity = entity.expect("manually checked");
                 entities.push(entity);
             } else {
                 entities.push(PacketEntity {
@@ -435,7 +454,11 @@ impl Encode for PacketEntitiesMessage {
 
                 entity.update_type.write(stream)?;
 
-                let send_table = get_send_table(state, entity.server_class)?;
+                let send_table = get_send_table(state, entity.server_class);
+                if send_table.is_err() {
+                    continue
+                }
+                let send_table = send_table.expect("manually checked");
                 match entity.update_type {
                     UpdateType::Enter => {
                         Self::write_enter(entity, stream, state)?;
@@ -537,11 +560,11 @@ impl PacketEntitiesMessage {
                     });
                 }
                 None => {
-                    return Err(ParseError::PropIndexOutOfBounds {
-                        index,
-                        prop_count: send_table.flattened_props.len(),
-                        table: send_table.name.to_string(),
-                    });
+                    //return Err(ParseError::PropIndexOutOfBounds {
+                    //    index,
+                    //    prop_count: send_table.flattened_props.len(),
+                    //    table: send_table.name.to_string(),
+                    //});
                 }
             }
         }
