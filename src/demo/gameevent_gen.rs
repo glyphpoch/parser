@@ -19,11 +19,7 @@ fn read_value<'a, T: EventValue + BitRead<'a, LittleEndian> + Default>(
         }
     };
     if T::value_type() != entry.kind {
-        return Err(ParseError::InvalidGameEvent {
-            expected_type: T::value_type(),
-            name,
-            found_type: entry.kind,
-        });
+        return Ok(T::default());
     }
     Ok(T::read(stream)?)
 }
