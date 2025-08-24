@@ -154,7 +154,7 @@ fn test_string_table_roundtrip() {
 #[serde(bound(deserialize = "'a: 'static"))]
 pub struct ExtraData<'a> {
     pub byte_len: u16,
-    #[size = "byte_len.saturating_mul(8)"]
+    #[size = "(byte_len as usize).saturating_mul(8)"]
     pub data: Stream<'a>,
 }
 

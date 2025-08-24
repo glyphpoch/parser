@@ -6,9 +6,9 @@ use crate::{ReadResult, Stream};
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VoiceInitMessage {
-    codec: String,
-    quality: u8,
-    sampling_rate: u16,
+    pub codec: String,
+    pub quality: u8,
+    pub sampling_rate: u16,
 }
 
 impl BitRead<'_, LittleEndian> for VoiceInitMessage {
@@ -67,11 +67,11 @@ fn test_voice_init_roundtrip() {
 #[endianness = "LittleEndian"]
 #[serde(bound(deserialize = "'a: 'static"))]
 pub struct VoiceDataMessage<'a> {
-    client: u8,
-    proximity: u8,
-    length: u16,
+    pub client: u8,
+    pub proximity: u8,
+    pub length: u16,
     #[size = "length"]
-    data: Stream<'a>,
+    pub data: Stream<'a>,
 }
 
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]

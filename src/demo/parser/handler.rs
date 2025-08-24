@@ -26,6 +26,7 @@ pub trait MessageHandler {
         _index: usize,
         _entries: &StringTableEntry,
         _parser_state: &ParserState,
+        _tick: DemoTick,
     ) {
     }
 
@@ -121,7 +122,7 @@ impl<'a, T: MessageHandler> DemoHandler<'a, T> {
             }
             Packet::StringTables(packet) => {
                 for table in packet.tables.into_iter() {
-                    self.handle_string_table(table)
+                    self.handle_string_table(table, packet.tick)
                 }
             }
             Packet::Message(packet) | Packet::Signon(packet) => {
@@ -134,10 +135,10 @@ impl<'a, T: MessageHandler> DemoHandler<'a, T> {
                             self.handle_message(Message::NetTick(message), packet.tick)
                         }
                         Message::CreateStringTable(message) => {
-                            self.handle_string_table(message.table)
+                            self.handle_string_table(message.table, packet.tick)
                         }
                         Message::UpdateStringTable(message) => {
-                            self.handle_table_update(message.table_id, message.entries)
+                            self.handle_table_update(message.table_id, message.entries, packet.tick)
                         }
                         Message::PacketEntities(msg) => {
                             self.handle_message(Message::PacketEntities(msg), packet.tick)
@@ -151,7 +152,7 @@ impl<'a, T: MessageHandler> DemoHandler<'a, T> {
         Ok(())
     }
 
-    fn handle_string_table(&mut self, table: StringTable<'a>) {
+    fn handle_string_table(&mut self, table: StringTable<'a>, tick: DemoTick) {
         self.state_handler
             .handle_string_table_meta(table.get_table_meta());
         for (entry_index, entry) in table.entries.into_iter() {
@@ -163,20 +164,31 @@ impl<'a, T: MessageHandler> DemoHandler<'a, T> {
                 entry_index,
                 &entry,
                 &self.state_handler,
+                tick,
             );
         }
 
         self.string_table_names.push(table.name);
     }
 
-    fn handle_table_update(&mut self, table_id: u8, entries: Vec<(u16, StringTableEntry<'a>)>) {
+    fn handle_table_update(
+        &mut self,
+        table_id: u8,
+        entries: Vec<(u16, StringTableEntry<'a>)>,
+        tick: DemoTick,
+    ) {
         if let Some(table_name) = self.string_table_names.get(table_id as usize) {
             for (index, entry) in entries {
                 let index = index as usize;
                 self.state_handler
                     .handle_string_entry(table_name, index, &entry);
-                self.analyser
-                    .handle_string_entry(table_name, index, &entry, &self.state_handler);
+                self.analyser.handle_string_entry(
+                    table_name,
+                    index,
+                    &entry,
+                    &self.state_handler,
+                    tick,
+                );
             }
         }
     }
