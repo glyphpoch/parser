@@ -214,16 +214,20 @@ pub enum ChatMessageKind {
 
 impl BitRead<'_, LittleEndian> for ChatMessageKind {
     fn read(stream: &mut Stream) -> ReadResult<Self> {
-        let raw: String = stream.read()?;
-        Ok(match raw.as_str() {
-            "TF_Chat_Team" => ChatMessageKind::ChatTeam,
-            "TF_Chat_AllDead" => ChatMessageKind::ChatAllDead,
-            "TF_Chat_Team_Dead" => ChatMessageKind::ChatTeamDead,
-            "#TF_Name_Change" => ChatMessageKind::NameChange,
-            "TF_Chat_All" => ChatMessageKind::ChatAll,
-            "TF_Chat_AllSpec" => ChatMessageKind::ChatAllSpec,
-            _ => ChatMessageKind::ChatAll,
-        })
+        let raw: MaybeUtf8String = stream.read()?;
+
+        match raw {
+            MaybeUtf8String::Valid(raw) => Ok(match raw.as_str() {
+                "TF_Chat_Team" => ChatMessageKind::ChatTeam,
+                "TF_Chat_AllDead" => ChatMessageKind::ChatAllDead,
+                "TF_Chat_Team_Dead" => ChatMessageKind::ChatTeamDead,
+                "#TF_Name_Change" => ChatMessageKind::NameChange,
+                "TF_Chat_All" => ChatMessageKind::ChatAll,
+                "TF_Chat_AllSpec" => ChatMessageKind::ChatAllSpec,
+                _ => ChatMessageKind::ChatAll,
+            }),
+            MaybeUtf8String::Invalid(_) => Ok(ChatMessageKind::ChatAll),
+        }
     }
 }
 
