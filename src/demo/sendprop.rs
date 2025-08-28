@@ -678,12 +678,30 @@ impl SendPropValue {
             SendPropParseDefinition::Vector {
                 definition: float_definition,
                 ..
-            } => Ok(Vector {
-                x: Self::read_float(stream, float_definition)?,
-                y: Self::read_float(stream, float_definition)?,
-                z: Self::read_float(stream, float_definition)?,
+            } => {
+                let x = Self::read_float(stream, float_definition)?;
+                let y = Self::read_float(stream, float_definition)?;
+                let z = match float_definition {
+                    FloatDefinition::NormalVarFloat => {
+                        let is_negative = stream.read()?;
+                        let x2y2 = x * x + y * y;
+                        let z = if x2y2 < 1.0f32 {
+                            f32::sqrt(1.0f32 - x2y2)
+                        } else {
+                            0.0f32
+                        };
+
+                        if is_negative {
+                            -z
+                        } else {
+                            z
+                        }
+                    }
+                    _ => Self::read_float(stream, float_definition)?,
+                };
+
+                Ok(Vector { x, y, z }.into())
             }
-            .into()),
             SendPropParseDefinition::VectorXY {
                 definition: float_definition,
                 ..
@@ -1528,4 +1546,33 @@ fn test_bit_normal_roundtrip() {
     roundtrip_normal(-0.0);
     roundtrip_normal(0.5);
     roundtrip_normal(-0.5);
+}
+
+#[test]
+fn test_vector_normal_var_float() {
+    use bitbuffer::BitReadBuffer;
+
+    let data: Vec<u8> = vec![0, 0, 0, 0];
+    let mut buffer = BitReadBuffer::new(&data, LittleEndian);
+    // (1 (sign bit) + 11 (frac val)) * 2 (NormalVarFloat) + 1 (z sign bit)
+    buffer.truncate(25).unwrap();
+    let mut read = BitReadStream::new(buffer);
+
+    let vector = SendPropValue::parse(
+        &mut read,
+        &SendPropParseDefinition::Vector {
+            changes_often: false,
+            definition: FloatDefinition::NormalVarFloat,
+        },
+    )
+    .unwrap();
+
+    assert_eq!(
+        SendPropValue::Vector(Vector {
+            x: 0.0f32,
+            y: 0.0f32,
+            z: 1.0f32
+        }),
+        vector
+    );
 }
