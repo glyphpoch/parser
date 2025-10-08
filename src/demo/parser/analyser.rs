@@ -143,7 +143,7 @@ impl Class {
     where
         u8: TryFrom<U>,
     {
-        Class::try_from(u8::try_from(number).unwrap_or_default()).unwrap_or_default()
+        Class::try_from(u8::try_from(number).unwrap_or_default()).unwrap()
     }
 }
 
