@@ -297,15 +297,17 @@ impl BitRead<'_, LittleEndian> for SayText2Message {
     fn read(stream: &mut Stream) -> ReadResult<Self> {
         let client = EntityId::from(stream.read::<u8>()? as u32);
         let raw = stream.read()?;
-        let (kind, from, text): (ChatMessageKind, Option<MaybeUtf8String>, MaybeUtf8String) =
-            if stream.read::<u8>()? == 1 {
-                stream.set_pos(stream.pos() - 8)?;
-
+        let (kind, from, text): (ChatMessageKind, Option<MaybeUtf8String>, MaybeUtf8String) = {
+            let next_byte = stream.read::<u8>()?;
+            stream.set_pos(stream.pos() - 8)?;
+            if next_byte > 0 && next_byte <= 8 {
+                // Starts with a color code (\x01-\x08) rather than a kind
+                // string like "TF_Chat_All", so this is the simplified format
+                // where the message body is just raw colored text without
+                // kind/from fields.
                 let text: MaybeUtf8String = stream.read()?;
                 (ChatMessageKind::ChatAll, None, text)
             } else {
-                stream.set_pos(stream.pos() - 8)?;
-
                 let kind = stream.read()?;
                 let from = stream.read()?;
                 let text = stream.read()?;
@@ -315,7 +317,8 @@ impl BitRead<'_, LittleEndian> for SayText2Message {
                     let _: u16 = stream.read()?;
                 }
                 (kind, Some(from), text)
-            };
+            }
+        };
 
         Ok(SayText2Message {
             client,
