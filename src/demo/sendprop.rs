@@ -775,7 +775,10 @@ impl SendPropValue {
                 let val: Vector = self.try_into()?;
                 Self::write_float(val.x, stream, float_definition)?;
                 Self::write_float(val.y, stream, float_definition)?;
-                Self::write_float(val.z, stream, float_definition)?;
+                match float_definition {
+                    FloatDefinition::NormalVarFloat => stream.write_bool(val.z.is_negative())?,
+                    _ => Self::write_float(val.z, stream, float_definition)?,
+                }
                 Ok(())
             }
             SendPropParseDefinition::VectorXY {
@@ -930,6 +933,17 @@ fn test_send_prop_value_roundtrip() {
         },
     );
     send_prop_value_roundtrip(
+        SendPropValue::Vector(Vector {
+            x: 0.0,
+            y: 0.0,
+            z: -1.0,
+        }),
+        SendPropParseDefinition::Vector {
+            changes_often: false,
+            definition: FloatDefinition::NormalVarFloat,
+        },
+    );
+    send_prop_value_roundtrip(
         SendPropValue::VectorXY(VectorXY { x: 1.0, y: 0.0 }),
         SendPropParseDefinition::VectorXY {
             changes_often: false,
@@ -1013,6 +1027,32 @@ fn test_send_prop_value_roundtrip() {
             unsigned: false,
         },
     );
+}
+
+#[test]
+#[cfg(feature = "write")]
+fn test_encode_vector_normal_var_float() {
+    use bitbuffer::BitWriteStream;
+
+    let vector = SendPropValue::Vector(Vector {
+        x: 0.0f32,
+        y: 0.0f32,
+        z: -1.0f32,
+    });
+    let def = SendPropParseDefinition::Vector {
+        changes_often: false,
+        definition: FloatDefinition::NormalVarFloat,
+    };
+
+    let mut data = Vec::new();
+    let pos = {
+        let mut write = BitWriteStream::new(&mut data, LittleEndian);
+        vector.encode(&mut write, &def).unwrap();
+        write.bit_len()
+    };
+
+    assert_eq!(pos, 25);
+    assert_eq!(data, vec![0, 0, 0, 1]);
 }
 
 impl From<i32> for SendPropValue {
