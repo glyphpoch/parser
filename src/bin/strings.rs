@@ -3,6 +3,7 @@ use std::env;
 use std::fs;
 
 use main_error::MainError;
+use tf_demo_parser::demo::data::DemoTick;
 use tf_demo_parser::demo::packet::stringtable::StringTableEntry;
 use tf_demo_parser::demo::parser::MessageHandler;
 use tf_demo_parser::MessageType;
@@ -72,6 +73,7 @@ impl MessageHandler for StringTableHandler {
         index: usize,
         entries: &StringTableEntry,
         _parser_state: &ParserState,
+        _tick: DemoTick,
     ) {
         let table = self.tables.entry(table.into()).or_default();
         if index < table.len() {
